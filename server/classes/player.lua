@@ -52,12 +52,22 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 	end
 
 	self.getMoney = function()
+		local cash = self.getInventoryItem('cash')
+		if self.getAccount('money').money ~= cash.count then
+			self.setAccountMoney('money', cash.count)
+		end
 		return self.getAccount('money').money
 	end
 
 	self.addMoney = function(money, recursion)
 		money = ESX.Math.Round(money)
-		self.addAccountMoney('money', money)
+		if money >= 0 then
+			self.addInventoryItem("cash", money)
+			local cash = self.getInventoryItem('cash')
+			if self.getAccount('money').money ~= cash.count then
+				self.setAccountMoney('money', cash.count)
+			end
+		end
 
 		if(not recursion)then
 			TriggerEvent("es:getPlayerFromId", self.source, function(user) user.addMoney(money, true) end)
@@ -70,7 +80,13 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 		end
 
 		money = ESX.Math.Round(money)
-		self.removeAccountMoney('money', money)
+		if money >= 0 then
+			self.removeInventoryItem("cash", money)
+			local cash = self.getInventoryItem('cash')
+			if self.getAccount('money').money ~= cash.count then
+				self.setAccountMoney('money', cash.count)
+			end
+		end
 	end
 
 	self.getIdentifier = function()
@@ -198,26 +214,42 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 
 	self.addAccountMoney = function(accountName, money)
 		if money > 0 then
-			local account = self.getAccount(accountName)
+			if accountName == 'money' then
+				self.addInventoryItem("cash", money)
+				local cash = self.getInventoryItem('cash')
+				if self.getAccount('money').money ~= cash.count then
+					self.setAccountMoney('money', cash.count)
+				end
+			else
+				local account = self.getAccount(accountName)
 
-			if account then
-				local newMoney = account.money + ESX.Math.Round(money)
-				account.money = newMoney
+				if account then
+					local newMoney = account.money + ESX.Math.Round(money)
+					account.money = newMoney
 
-				self.triggerEvent('esx:setAccountMoney', account)
+					self.triggerEvent('esx:setAccountMoney', account)
+				end
 			end
 		end
-	end
-
+	end	
+	
 	self.removeAccountMoney = function(accountName, money)
 		if money > 0 then
-			local account = self.getAccount(accountName)
+			if accountName == 'money' then
+				self.removeInventoryItem("cash", money)
+				local cash = self.getInventoryItem('cash')
+				if self.getAccount('money').money ~= cash.count then
+					self.setAccountMoney('money', cash.count)
+				end
+			else
+				local account = self.getAccount(accountName)
 
-			if account then
-				local newMoney = account.money - ESX.Math.Round(money)
-				account.money = newMoney
+				if account then
+					local newMoney = account.money - ESX.Math.Round(money)
+					account.money = newMoney
 
-				self.triggerEvent('esx:setAccountMoney', account)
+					self.triggerEvent('esx:setAccountMoney', account)
+				end
 			end
 		end
 	end
@@ -268,8 +300,14 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 			item.count = item.count + count
 			self.weight = self.weight + (item.weight * count)
 
-			TriggerEvent('esx:onAddInventoryItem', self.source, item.name, item.count)
+			TriggerEvent('esx:onAddInventoryItem', self.source, item, count)
 			self.triggerEvent('esx:addInventoryItem', item.name, item.count, false, item)
+
+			if item.name == 'cash' then
+				if self.getAccount('money').money ~= item.count then
+					self.setAccountMoney('money', item.count)
+				end
+			end
 		end
 	end
 
@@ -284,8 +322,14 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 				item.count = newCount
 				self.weight = self.weight - (item.weight * count)
 
-				TriggerEvent('esx:onRemoveInventoryItem', self.source, item.name, item.count)
+				TriggerEvent('esx:onRemoveInventoryItem', self.source, item, count)
 				self.triggerEvent('esx:removeInventoryItem', item.name, item.count)
+
+				if item.name == 'cash' then
+					if self.getAccount('money').money ~= item.count then
+						self.setAccountMoney('money', item.count)
+					end
+				end
 			end
 		end
 	end
